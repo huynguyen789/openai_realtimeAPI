@@ -19,7 +19,7 @@ import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_config.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
-import { X, Edit, Zap, ArrowUp, ArrowDown } from 'react-feather';
+import { X, Edit, Zap, ArrowUp, ArrowDown, Clock } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
 import { Map } from '../components/Map';
@@ -124,6 +124,7 @@ export function ConsolePage() {
     lng: -122.418137,
   });
   const [marker, setMarker] = useState<Coordinates | null>(null);
+  const [currentDateTime, setCurrentDateTime] = useState<string>('');
 
   /**
    * Utility for formatting the timing of logs
@@ -455,6 +456,21 @@ export function ConsolePage() {
       }
     );
 
+    // Add this new tool for getting the current date and time
+    client.addTool(
+      {
+        name: 'get_current_datetime',
+        description: 'Retrieves the current date and time.',
+        parameters: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      async () => {
+        return { datetime: getCurrentDateTime() };
+      }
+    );
+
     // handle realtime events from client + server for event logging
     client.on('realtime.event', (realtimeEvent: RealtimeEvent) => {
       setRealtimeEvents((realtimeEvents) => {
@@ -499,6 +515,21 @@ export function ConsolePage() {
       client.reset();
     };
   }, []);
+
+  // Add this new function to get the current date and time
+  const getCurrentDateTime = useCallback(() => {
+    const now = new Date();
+    return now.toLocaleString();
+  }, []);
+
+  // Add this effect to update the current date and time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(getCurrentDateTime());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [getCurrentDateTime]);
 
   /**
    * Render the application
@@ -722,6 +753,14 @@ export function ConsolePage() {
             <div className="content-block-title">set_memory()</div>
             <div className="content-block-body content-kv">
               {JSON.stringify(memoryKv, null, 2)}
+            </div>
+          </div>
+          <div className="content-block datetime">
+            <div className="content-block-title">
+              <Clock size={16} /> Current Date and Time
+            </div>
+            <div className="content-block-body">
+              {currentDateTime}
             </div>
           </div>
         </div>
