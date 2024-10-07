@@ -19,13 +19,14 @@ import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_config.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
-import { X, Edit, Zap, ArrowUp, ArrowDown, Clock } from 'react-feather';
+import { X, Edit, Zap, ArrowUp, ArrowDown } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
 import { Map } from '../components/Map';
 
 import './ConsolePage.scss';
 import { isJsxOpeningLikeElement } from 'typescript';
+import axios from 'axios';
 
 /**
  * Type for result from get_weather() function call
@@ -52,6 +53,11 @@ interface RealtimeEvent {
   source: 'client' | 'server';
   count?: number;
   event: { [key: string]: any };
+}
+
+interface SearchResult {
+  query: string;
+  results: any; // You might want to type this more specifically based on the Serper API response
 }
 
 export function ConsolePage() {
@@ -124,7 +130,7 @@ export function ConsolePage() {
     lng: -122.418137,
   });
   const [marker, setMarker] = useState<Coordinates | null>(null);
-  const [currentDateTime, setCurrentDateTime] = useState<string>('');
+  const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
 
   /**
    * Utility for formatting the timing of logs
@@ -456,7 +462,7 @@ export function ConsolePage() {
       }
     );
 
-    // Add this new tool for getting the current date and time
+    // Add this new simplified tool
     client.addTool(
       {
         name: 'get_current_datetime',
@@ -467,7 +473,49 @@ export function ConsolePage() {
         },
       },
       async () => {
-        return { datetime: getCurrentDateTime() };
+        const now = new Date();
+        return {
+          iso: now.toISOString(),
+          readable: now.toString(),
+          timestamp: now.getTime(),
+        };
+      }
+    );
+
+    // Add web search tool
+    client.addTool(
+      {
+        name: 'web_search',
+        description: 'Search the web for current information on a given query',
+        parameters: {
+          type: 'object',
+          properties: {
+            query: {
+              type: 'string',
+              description: 'The search query'
+            }
+          },
+          required: ['query']
+        }
+      },
+      async ({ query }: { query: string }) => {
+        try {
+          const response = await axios.post(
+            'https://google.serper.dev/search',
+            { q: query },
+            {
+              headers: {
+                'X-API-KEY': process.env.REACT_APP_SERPER_API_KEY,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          setSearchResult({ query, results: response.data });
+          return response.data;
+        } catch (error) {
+          console.error('Error performing web search:', error);
+          throw error;
+        }
       }
     );
 
@@ -515,21 +563,6 @@ export function ConsolePage() {
       client.reset();
     };
   }, []);
-
-  // Add this new function to get the current date and time
-  const getCurrentDateTime = useCallback(() => {
-    const now = new Date();
-    return now.toLocaleString();
-  }, []);
-
-  // Add this effect to update the current date and time every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentDateTime(getCurrentDateTime());
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [getCurrentDateTime]);
 
   /**
    * Render the application
@@ -755,12 +788,30 @@ export function ConsolePage() {
               {JSON.stringify(memoryKv, null, 2)}
             </div>
           </div>
-          <div className="content-block datetime">
-            <div className="content-block-title">
-              <Clock size={16} /> Current Date and Time
+          <div className="content-block search">
+            <div className="content-block-title">web_search()</div>
+            <div className="content-block-title bottom">
+              {searchResult?.query || 'No search performed yet'}
             </div>
-            <div className="content-block-body">
-              {currentDateTime}
+            <div className="content-block-body full">
+              {searchResult ? (
+                <div className="search-results">
+                  {searchResult.results.organic && searchResult.results.organic.length > 0 ? (
+                    <ul>
+                      {searchResult.results.organic.slice(0, 3).map((result: any, index: number) => (
+                        <li key={index}>
+                          <a href={result.link} target="_blank" rel="noopener noreferrer">{result.title}</a>
+                          <p>{result.snippet}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>No results found</p>
+                  )}
+                </div>
+              ) : (
+                <p>Search results will appear here</p>
+              )}
             </div>
           </div>
         </div>
