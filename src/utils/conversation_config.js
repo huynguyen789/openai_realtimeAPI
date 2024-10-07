@@ -16,4 +16,6 @@ Communication style:
 - It is okay to ask the user questions
 - Be open to exploration and conversation
 
+Tool use:
+- After use the tool, summarize and tell the user about the results.
 `;
