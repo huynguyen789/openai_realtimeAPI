@@ -34,8 +34,9 @@
   }
 
   .content-main {
-    flex-grow: 1;
-    flex-shrink: 1 !important;
+    flex: 1;
+    display: flex;
+    overflow: hidden;
     margin: 0px 16px;
     display: flex;
     overflow: hidden;
@@ -65,9 +66,16 @@
         }
       }
     }
+    .content-left {
+      display: flex;
+      flex-direction: column;
+      width: 70%; // Adjust as needed
+      height: 100%;
+    }
     .content-right {
-      width: 300px;
-      flex-shrink: 0;
+      width: 30%; // Adjust as needed
+      height: 100%;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
       margin-left: 24px;
@@ -112,10 +120,11 @@
       }
     }
     .content-logs {
-      flex-grow: 1;
+      flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      height: 100%;
       & > div {
         flex-grow: 1;
       }
@@ -257,6 +266,7 @@
     border-radius: 16px;
     z-index: 10;
     gap: 2px;
+    height: 30px; // Adjust as needed
     .visualization-entry {
       position: relative;
       display: flex;
@@ -307,3 +317,66 @@
     }
   }
 }
+
+.content-logs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+
+  .content-block {
+    &.conversation {
+      flex: 0 0 66%; // This sets it to take up 2/3 of the space
+      height: 66%; // Explicitly set height to 2/3
+    }
+
+    &.events {
+      flex: 0 0 34%; // This sets it to take up 1/3 of the space
+      height: 34%; // Explicitly set height to 1/3
+    }
+  }
+}
+
+// Remove or comment out this general rule if it exists
+// .content-block-body {
+//   height: calc(100% - 30px);
+//   overflow-y: auto;
+// }
+
+.visualization {
+  height: 30px; // Adjust as needed
+  // Other existing styles...
+}
+
+// You may need to adjust other styles to ensure proper spacing and layout
+
+.content-block.conversation {
+  height: 66%;
+  overflow-y: auto;
+}
+
+.content-block.events {
+  height: 34%;
+  overflow-y: auto;
+}
+
+.content-actions {
+  flex-shrink: 0;
+  height: 60px; // Adjust based on your desired height
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: #f5f5f5; // Add a background color if needed
+}
+
+.content-actions button {
+  margin-right: 10px; // Add some space between buttons
+}
+
+.content-block-body {
+  height: calc(100% - 30px); // Adjust based on your title height
+  overflow-y: auto;
+}
+
+// Add any additional styles needed for proper layout
