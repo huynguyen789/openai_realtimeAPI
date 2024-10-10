@@ -60,6 +60,31 @@ interface SearchResult {
   results: any; // You might want to type this more specifically based on the Serper API response
 }
 
+const API_URL = 'http://localhost:3001/api';
+
+const handleFileOperation = async (operation: 'create' | 'edit' | 'delete', filename: string, content?: string) => {
+  try {
+    let response;
+    switch (operation) {
+      case 'create':
+        response = await axios.post(`${API_URL}/create-file`, { filename, content });
+        break;
+      case 'edit':
+        response = await axios.post(`${API_URL}/edit-file`, { filename, content });
+        break;
+      case 'delete':
+        response = await axios.delete(`${API_URL}/delete-file`, { data: { filename } });
+        break;
+      default:
+        throw new Error('Invalid operation');
+    }
+    return response.data;
+  } catch (error) {
+    console.error(`Error ${operation}ing file:`, error);
+    return { success: false, message: `Error ${operation}ing file: ${(error as Error).message}` };
+  }
+};
+
 export function ConsolePage() {
   /**
    * Ask user for API Key
@@ -517,6 +542,71 @@ export function ConsolePage() {
           throw error;
         }
       }
+    );
+
+    // Add create_file tool
+    client.addTool(
+      {
+        name: 'create_file',
+        description: 'Creates a new file with the given content.',
+        parameters: {
+          type: 'object',
+          properties: {
+            filename: {
+              type: 'string',
+              description: 'The name of the file to create',
+            },
+            content: {
+              type: 'string',
+              description: 'The content to write to the file',
+            },
+          },
+          required: ['filename', 'content'],
+        },
+      },
+      async ({ filename, content }: { filename: string; content: string }) => handleFileOperation('create', filename, content)
+    );
+
+    // Add edit_file tool
+    client.addTool(
+      {
+        name: 'edit_file',
+        description: 'Edits an existing file with the given content.',
+        parameters: {
+          type: 'object',
+          properties: {
+            filename: {
+              type: 'string',
+              description: 'The name of the file to edit',
+            },
+            content: {
+              type: 'string',
+              description: 'The new content to write to the file',
+            },
+          },
+          required: ['filename', 'content'],
+        },
+      },
+      async ({ filename, content }: { filename: string; content: string }) => handleFileOperation('edit', filename, content)
+    );
+
+    // Add delete_file tool
+    client.addTool(
+      {
+        name: 'delete_file',
+        description: 'Deletes the specified file.',
+        parameters: {
+          type: 'object',
+          properties: {
+            filename: {
+              type: 'string',
+              description: 'The name of the file to delete',
+            },
+          },
+          required: ['filename'],
+        },
+      },
+      async ({ filename }: { filename: string }) => handleFileOperation('delete', filename)
     );
 
     // handle realtime events from client + server for event logging
