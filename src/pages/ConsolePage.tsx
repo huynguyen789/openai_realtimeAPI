@@ -27,6 +27,8 @@ import { Map } from '../components/Map';
 import './ConsolePage.scss';
 import { isJsxOpeningLikeElement } from 'typescript';
 import axios from 'axios';
+import fs from 'fs/promises';
+import path from 'path';
 
 /**
  * Type for result from get_weather() function call
@@ -82,6 +84,27 @@ const handleFileOperation = async (operation: 'create' | 'edit' | 'delete', file
   } catch (error) {
     console.error(`Error ${operation}ing file:`, error);
     return { success: false, message: `Error ${operation}ing file: ${(error as Error).message}` };
+  }
+};
+
+// Add this to your existing handleFileOperation function or create a new one for memory operations
+const handleMemoryFileOperation = async (operation: 'read' | 'write', content?: { [key: string]: any }) => {
+  try {
+    let response;
+    switch (operation) {
+      case 'read':
+        response = await axios.get(`${API_URL}/read-memory`);
+        break;
+      case 'write':
+        response = await axios.post(`${API_URL}/write-memory`, { content });
+        break;
+      default:
+        throw new Error('Invalid operation');
+    }
+    return response.data;
+  } catch (error) {
+    console.error(`Error ${operation} memory:`, error);
+    return { success: false, message: `Error ${operation} memory: ${(error as Error).message}` };
   }
 };
 
@@ -423,8 +446,7 @@ export function ConsolePage() {
           properties: {
             key: {
               type: 'string',
-              description:
-                'The key of the memory value. Always use lowercase and underscores, no other characters.',
+              description: 'The key of the memory value. Always use lowercase and underscores, no other characters.',
             },
             value: {
               type: 'string',
@@ -435,12 +457,29 @@ export function ConsolePage() {
         },
       },
       async ({ key, value }: { [key: string]: any }) => {
-        setMemoryKv((memoryKv) => {
-          const newKv = { ...memoryKv };
-          newKv[key] = value;
-          return newKv;
-        });
-        return { ok: true };
+        try {
+          // Read existing memory
+          const existingMemory = await handleMemoryFileOperation('read');
+          
+          // Clean up any error messages that might have been saved
+          const cleanMemory = Object.fromEntries(
+            Object.entries(existingMemory).filter(([k]) => !['success', 'message'].includes(k))
+          );
+          
+          // Update memory
+          const updatedMemory = { ...cleanMemory, [key]: value };
+          
+          // Write updated memory
+          const result = await handleMemoryFileOperation('write', updatedMemory);
+          
+          // Update state
+          setMemoryKv(updatedMemory);
+          
+          return { ok: true, message: 'Memory updated successfully' };
+        } catch (error) {
+          console.error('Error updating memory:', error);
+          return { ok: false, message: 'Failed to update memory' };
+        }
       }
     );
     client.addTool(

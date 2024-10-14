@@ -59,6 +59,33 @@ app.delete('/api/delete-file', async (req, res) => {
   }
 });
 
+// Read memory
+app.get('/api/read-memory', async (req, res) => {
+  const filePath = path.join(__dirname, 'memory', 'memory.json');
+  try {
+    const data = await fs.readFile(filePath, 'utf-8');
+    res.json(JSON.parse(data));
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      res.json({});
+    } else {
+      res.status(500).json({ success: false, message: 'Error reading memory file' });
+    }
+  }
+});
+
+// Write memory
+app.post('/api/write-memory', async (req, res) => {
+  const filePath = path.join(__dirname, 'memory', 'memory.json');
+  try {
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, JSON.stringify(req.body.content, null, 2));
+    res.json({ success: true, message: 'Memory updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error writing memory file' });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
