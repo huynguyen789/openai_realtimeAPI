@@ -222,6 +222,16 @@ export function ConsolePage() {
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
 
+    // Load memory before connecting
+    try {
+      const memoryData = await handleMemoryFileOperation('read');
+      setMemoryKv(memoryData);
+    } catch (error) {
+      console.error('Error loading memory:', error);
+      // If there's an error, we'll continue with an empty memory
+      setMemoryKv({});
+    }
+
     // Set state variables
     startTimeRef.current = new Date().toISOString();
     setIsConnected(true);
@@ -431,8 +441,23 @@ export function ConsolePage() {
     const wavStreamPlayer = wavStreamPlayerRef.current;
     const client = clientRef.current;
 
-    // Set instructions
-    client.updateSession({ instructions: instructions });
+    // Set instructions with memory included
+    const updateInstructions = async () => {
+      let memory;
+      try {
+        memory = await handleMemoryFileOperation('read');
+      } catch (error) {
+        console.error('Error reading memory:', error);
+        memory = {};
+      }
+
+      const instructionsWithMemory = `${instructions}\n\nHere is the current user memory: ${JSON.stringify(memory)}. Use this information to personalize your responses and maintain context throughout the conversation.`;
+
+      client.updateSession({ instructions: instructionsWithMemory });
+    };
+
+    updateInstructions();
+
     // Set transcription, otherwise we don't get user transcriptions back
     client.updateSession({ input_audio_transcription: { model: 'whisper-1' } });
 
@@ -459,22 +484,17 @@ export function ConsolePage() {
       async ({ key, value }: { [key: string]: any }) => {
         try {
           // Read existing memory
-          const existingMemory = await handleMemoryFileOperation('read');
-          
+          const existingMemory = await handleMemoryFileOperation('read');          
           // Clean up any error messages that might have been saved
           const cleanMemory = Object.fromEntries(
             Object.entries(existingMemory).filter(([k]) => !['success', 'message'].includes(k))
-          );
-          
+          );          
           // Update memory
-          const updatedMemory = { ...cleanMemory, [key]: value };
-          
+          const updatedMemory = { ...cleanMemory, [key]: value };          
           // Write updated memory
-          const result = await handleMemoryFileOperation('write', updatedMemory);
-          
+          const result = await handleMemoryFileOperation('write', updatedMemory);          
           // Update state
-          setMemoryKv(updatedMemory);
-          
+          setMemoryKv(updatedMemory);          
           return { ok: true, message: 'Memory updated successfully' };
         } catch (error) {
           console.error('Error updating memory:', error);
